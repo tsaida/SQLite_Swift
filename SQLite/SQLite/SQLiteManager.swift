@@ -130,47 +130,62 @@ class SQLiteManager: NSObject
         var records = [[String: AnyObject]]()
         while sqlite3_step(stmt) == SQLITE_ROW
         {
-            //拿到当前这条数据所有的列
-            let count = sqlite3_column_count(stmt)
-            
-            var record = [String: AnyObject]()
-            for index in 0..<count
-            {
-                //拿到每一列名称
-                let cName = sqlite3_column_name(stmt, index)
-                let name = String(CString: cName, encoding: NSUTF8StringEncoding)!
-                
-                //拿到每一列的类型
-                let type = sqlite3_column_type(stmt, index)
-                
-                //根据类型执行相关的语句取出列名对应的列值
-                switch(type) {
-                case SQLITE_INTEGER:
-                    //整型
-                    let num = sqlite3_column_int64(stmt, index)
-                    record[name] = Int(num)
-                case SQLITE_FLOAT:
-                    //浮点型
-                    let double = sqlite3_column_double(stmt, index)
-                    record[name] = Double(double)
-                case SQLITE3_TEXT:
-                    let cText = UnsafePointer<Int8>(sqlite3_column_text(stmt, index))
-                    let text = String(CString: cText, encoding: NSUTF8StringEncoding)!
-                    record[name] = text
-                    //文本类型
-                case SQLITE_NULL:
-                    //空类型
-                    record[name] = NSNull()
-                default :
-                    //二进制类型 SQLITE_BLOB
-                    //一般情况下，不会往数据库中存储二进制数据
-                    print("")
-                } //switch
-            } //for
-            
+            //获取一条查询记录的值
+            let record = recordWithStmt(stmt)
+            //将当前获取到的这一条记录添加到数组中
             records.append(record)
         } //while
         
         return records
     } //func
+    
+    /**
+    获取一条查询记录的值
+    
+    - parameter stmt: 预编译好的SQL语句
+    
+    - returns: 数据字典
+    */
+    private func recordWithStmt(stmt: COpaquePointer) -> [String: AnyObject]
+    {
+        //拿到当前这条数据所有的列
+        let count = sqlite3_column_count(stmt)
+        
+        var record = [String: AnyObject]()
+        for index in 0..<count
+        {
+            //拿到每一列名称
+            let cName = sqlite3_column_name(stmt, index)
+            let name = String(CString: cName, encoding: NSUTF8StringEncoding)!
+            
+            //拿到每一列的类型
+            let type = sqlite3_column_type(stmt, index)
+            
+            //根据类型执行相关的语句取出列名对应的列值
+            switch(type) {
+            case SQLITE_INTEGER:
+                //整型
+                let num = sqlite3_column_int64(stmt, index)
+                record[name] = Int(num)
+            case SQLITE_FLOAT:
+                //浮点型
+                let double = sqlite3_column_double(stmt, index)
+                record[name] = Double(double)
+            case SQLITE3_TEXT:
+                let cText = UnsafePointer<Int8>(sqlite3_column_text(stmt, index))
+                let text = String(CString: cText, encoding: NSUTF8StringEncoding)!
+                record[name] = text
+                //文本类型
+            case SQLITE_NULL:
+                //空类型
+                record[name] = NSNull()
+            default :
+                //二进制类型 SQLITE_BLOB
+                //一般情况下，不会往数据库中存储二进制数据
+                print("")
+            } //switch
+        } //for
+        
+        return record
+    } // func
 }
