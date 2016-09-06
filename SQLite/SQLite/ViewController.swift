@@ -19,16 +19,34 @@ class ViewController: UIViewController {
 //        print(p.deletePerson())
 //        print(Person.loadPerson())
         
-//        let start = CFAbsoluteTimeGetCurrent()
-//        for i in 0..<10000
-//        {
-//            let person = Person(dict: ["name": "li + \(i)", "age": 20 + i])
-//            person.insertPerson()
-//        }
-//        print("耗时 = \(CFAbsoluteTimeGetCurrent() - start)")
+//        let person = Person(dict: ["name": "li", "age": 35])
+//        person.insertQueuePerson()
         
-        let person = Person(dict: ["name": "li", "age": 35])
-        person.insertQueuePerson()
+        let start = CFAbsoluteTimeGetCurrent()
+        let manager = SQLiteManager.shareManager()
+        
+        //开启事务
+        manager.beginTransaction()
+        
+        for i in 0..<10000
+        {
+            let person = Person(dict: ["name": "li + \(i)", "age": 20 + i])
+            person.insertPerson()
+            
+            
+            if i == 1000
+            {
+                manager.rollbackTransaction()
+                // 注意点: 回滚之后一定要跳出循环停止更新
+                break
+            }
+        }
+        //提交事务
+        manager.commitTransaction()
+        
+        print("耗时 = \(CFAbsoluteTimeGetCurrent() - start)")
+        
+        
     }
 }
 

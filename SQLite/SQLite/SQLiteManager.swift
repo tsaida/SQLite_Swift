@@ -37,6 +37,31 @@ class SQLiteManager: NSObject
         }
     }
     
+    // MARK: - 事务相关
+    
+    /*
+    每一次在调用execSQL执行SQL语句的时候都会自己默认做开启事务，提交事务，或回滚事务的处理，要插入10000条数据，就会做10000次这样的操作
+    所以可以在插入数据之前开启事务，当开启事务之后，就不会在插入的时候再开启事务了，整个过程只进行一次开启事务，提交事务或回滚事务
+    */
+    
+    //1.开启事务
+    func beginTransaction()
+    {
+        execSQL("BEGIN TRANSACTION")
+    }
+    
+    //2.提交事务
+    func commitTransaction()
+    {
+        execSQL("COMMIT TRANSACTION")
+    }
+    
+    //3.回滚
+    func rollbackTransaction()
+    {
+        execSQL("ROLLBACK TRANSACTION")
+    }
+    
     /**
      打开数据库
      
