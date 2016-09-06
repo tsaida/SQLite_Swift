@@ -17,7 +17,18 @@ class ViewController: UIViewController {
 //        print(person.insertPerson())
 //        print(p.updatePerson("ww"))
 //        print(p.deletePerson())
-        print(Person.loadPerson())
+//        print(Person.loadPerson())
+        
+//        let start = CFAbsoluteTimeGetCurrent()
+//        for i in 0..<10000
+//        {
+//            let person = Person(dict: ["name": "li + \(i)", "age": 20 + i])
+//            person.insertPerson()
+//        }
+//        print("耗时 = \(CFAbsoluteTimeGetCurrent() - start)")
+        
+        let person = Person(dict: ["name": "li", "age": 35])
+        person.insertQueuePerson()
     }
 }
 

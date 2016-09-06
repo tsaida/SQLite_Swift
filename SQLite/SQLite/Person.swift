@@ -42,12 +42,32 @@ class Person: NSObject
     {
         assert(name != nil, "必须要给name赋值")
         
+        //编写SQL语句
         let sql = "INSERT INTO T_Person" +
                     "(name, age)" +
                     "VALUES" +
                     "('\(name!)', \(age));"
         
+        //执行SQL语句
         return SQLiteManager.shareManager().execSQL(sql)
+    }
+    
+    /*
+    插入一条记录
+    */
+    func insertQueuePerson()
+    {
+        SQLiteManager.shareManager().insertQueueSQL { (manager) -> () in
+            assert(self.name != nil, "必须要给name赋值")
+            //编写SQL语句
+            let sql = "INSERT INTO T_Person" +
+                "(name, age)" +
+                "VALUES" +
+            "('\(self.name!)', \(self.age));"
+            
+            //执行SQL语句
+            manager.execSQL(sql)
+        }
     }
     
     /*

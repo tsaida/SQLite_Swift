@@ -17,7 +17,26 @@ class SQLiteManager: NSObject
         return manager
     }
     
+    //数据库对象
     private var db: COpaquePointer = nil
+    
+    //创建一个串行队列
+    private let dbQueue = dispatch_queue_create("paomoliu", DISPATCH_QUEUE_SERIAL)
+    
+    /*
+    插入一条记录
+    解决插入很多条记录方法之一，一定要创建串行队列，在一个子线程中执行，以为sqlite数据库就是一个文件
+    对文件的操作如果在多个子线程中并行插入，就会造成混乱
+    */
+    func insertQueueSQL(action: (manager: SQLiteManager)->())
+    {
+        //开启一个子线程
+        dispatch_async(dbQueue) { () -> Void in
+            //执行闭包
+            action(manager: self)
+        }
+    }
+    
     /**
      打开数据库
      
