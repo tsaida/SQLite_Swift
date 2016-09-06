@@ -25,7 +25,7 @@ class SQLiteManager: NSObject
     
     /*
     插入一条记录
-    解决插入很多条记录方法之一，一定要创建串行队列，在一个子线程中执行，以为sqlite数据库就是一个文件
+    解决插入很多条记录第一种方法，一定要创建串行队列，在一个子线程中执行，以为sqlite数据库就是一个文件
     对文件的操作如果在多个子线程中并行插入，就会造成混乱
     */
     func insertQueueSQL(action: (manager: SQLiteManager)->())
@@ -40,6 +40,7 @@ class SQLiteManager: NSObject
     // MARK: - 事务相关
     
     /*
+    解决插入多条数据性能提升第二种方法
     每一次在调用execSQL执行SQL语句的时候都会自己默认做开启事务，提交事务，或回滚事务的处理，要插入10000条数据，就会做10000次这样的操作
     所以可以在插入数据之前开启事务，当开启事务之后，就不会在插入的时候再开启事务了，整个过程只进行一次开启事务，提交事务或回滚事务
     */
@@ -61,6 +62,94 @@ class SQLiteManager: NSObject
     {
         execSQL("ROLLBACK TRANSACTION")
     }
+    
+    // MARK: - 预编译
+    
+    /// 自定义一个SQLITE_TRANSIENT, 覆盖系统的
+    private let SQLITE_TRANSIENT = unsafeBitCast(-1, sqlite3_destructor_type.self)
+    
+    /**
+     通过预编译SQL语句来提升性能第三种方法
+     
+     - parameter sql:  要执行的SQL语句
+     - parameter args: 接收多个参数
+     */
+    func batchExecSQL(sql: String, args: CVarArgType...)
+    {
+        //数组
+//        print(args)
+        
+        //将Swift字符串转为C语言字符串
+        let cSQL = sql.cStringUsingEncoding(NSUTF8StringEncoding)!
+        
+        //预编译SQL语句
+        var stmt: COpaquePointer = nil
+        if sqlite3_prepare_v2(db, cSQL, -1, &stmt, nil) != SQLITE_OK
+        {
+            print("预编译失败")
+            sqlite3_finalize(stmt)
+            return
+        }
+        
+        //绑定数据
+        //index要从1开始，因为0是id
+        var index: Int32 = 1
+        for objc in args
+        {
+            if objc is Int
+            {
+//                print("通过int方法绑定数据 \(objc)")
+                // 第二个参数就是SQL中('?', ?)的位置
+                sqlite3_bind_int64(stmt, index, sqlite3_int64(objc as! Int))
+            } else if objc is Double
+            {
+//                print("通过Double方法绑定数据 \(objc)")
+                sqlite3_bind_double(stmt, index, objc as! Double)
+            } else if objc is String
+            {
+//                print("通过Text方法绑定数据 \(objc)")
+                
+                // 第三个参数: 需要绑定的字符串, C语言
+                // 第四个参数: 第三个参数的长度, 传入-1系统自动计算
+                // 第五个参数: OC中直接传nil, 但是Swift传入nil会有大问题
+                /*
+                typedef void (*sqlite3_destructor_type)(void*);
+                
+                #define SQLITE_STATIC      ((sqlite3_destructor_type)0)
+                #define SQLITE_TRANSIENT   ((sqlite3_destructor_type)-1)
+                
+                第五个参数如果传入SQLITE_STATIC/nil, 那么系统不会保存需要绑定的数据, 如果需要绑定的数据提前释放了, 那么系统就随便绑定一个值
+                第五个参数如果传入SQLITE_TRANSIENT, 那么系统会对需要绑定的值进行一次copy, 直到绑定成功之后再释放
+                */
+                
+                let text = objc as! String
+                let cText = text.cStringUsingEncoding(NSUTF8StringEncoding)!
+                sqlite3_bind_text(stmt, index, cText, -1, SQLITE_TRANSIENT)
+            } // if ... else if
+            
+            index++
+        } // for
+        
+        //执行SQL语句
+        if sqlite3_step(stmt) != SQLITE_DONE
+        {
+            print("执行SQL语句失败")
+            sqlite3_finalize(stmt)
+            return
+        }
+        
+        //重置stmt
+        if sqlite3_reset(stmt) != SQLITE_OK
+        {
+            print("重置失败")
+            sqlite3_finalize(stmt)
+            return
+        }
+        
+        //关闭stmt
+        sqlite3_finalize(stmt)
+    } // func
+    
     
     /**
      打开数据库
